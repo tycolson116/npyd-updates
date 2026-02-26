@@ -1,0 +1,68 @@
+:root {
+    --danger: #ff4757;
+    --warning: #ffa502;
+    --safe: #2ed573;
+    --bg: #0f172a;
+    --card: #1e293b;
+    --text: #f8fafc;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: var(--bg);
+    color: var(--text);
+    margin: 0;
+    display: flex;
+    justify-content: center;
+}
+
+.app-container {
+    width: 100%;
+    max-width: 480px;
+    padding: 20px;
+}
+
+.search-box {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+input {
+    flex: 1;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #334155;
+    background: var(--card);
+    color: white;
+    font-size: 1.1rem;
+}
+
+button {
+    padding: 15px 25px;
+    border-radius: 8px;
+    border: none;
+    background: #3b82f6;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.officer-result {
+    background: var(--card);
+    padding: 20px;
+    border-radius: 12px;
+    border-left: 8px solid var(--warning);
+    margin-bottom: 20px;
+}
+
+.officer-result.high-risk { border-left-color: var(--danger); }
+
+.rights-card {
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid #3b82f6;
+    padding: 15px;
+    border-radius: 12px;
+}
+
+.hidden { display: none; }
