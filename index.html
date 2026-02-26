@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NYPD Accountability Tracker</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <h1>Officer Lookup</h1>
+            <p class="subtitle">Enter Shield Number or Last Name</p>
+        </header>
+
+        <main>
+            <div class="search-box">
+                <input type="text" id="officerInput" placeholder="e.g. 12345" autocomplete="off">
+                <button id="searchBtn">SEARCH</button>
+            </div>
+
+            <div id="resultsArea" class="hidden">
+                </div>
+
+            <div class="rights-card">
+                <h3>Your 4th Amendment Rights</h3>
+                <ul>
+                    <li><strong>Identify:</strong> Officers must provide name/shield.</li>
+                    <li><strong>Search:</strong> You may withhold consent for searches.</li>
+                    <li><strong>Record:</strong> You have a legal right to film.</li>
+                </ul>
+            </div>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
