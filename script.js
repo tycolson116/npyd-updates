@@ -1,29 +1,32 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 
 const supabase = createClient('https://lcfezxfcljjztutbuonk.supabase.co', 'sb_publishable_3XzU5p7x061I67j5_A5ong_SpcSRAOO')
 const NYC_DATA_URL = "https://data.cityofnewyork.us/resource/2fir-qns4.json"
 
 async function syncNYPDData() {
-  // 1. Fetch the latest officer data
-  const response = await fetch(`${NYC_DATA_URL}?$limit=5000`);
-  const nypdData = await response.json();
+  // Fetch from NYC Open Data Officer Profile
+  const response = await fetch("https://data.cityofnewyork.us/resource/2fir-qns4.json?$limit=50");
+  const officers = await response.json();
 
-  // 2. Map NYC fields to your Supabase columns
-  const formattedData = nypdData.map(officer => ({
-    tax_id: officer.tax_id,
-    officer_first_name: officer.officer_first_name,
-    officer_last_name: officer.officer_last_name,
-    officer_rank_abbreviation: officer.current_rank_abbreviation,
-    command: officer.current_command,
-    shield_no: officer.shield_no,
-    last_updated: new RegExp('as_of_date') // Tracking updates
+  const formattedData = officers.map(off => ({
+    tax_id: parseInt(off.tax_id),
+    officer_first_name: off.first_name,
+    officer_last_name: off.last_name,
+    current_rank_abbreviation: off.rank_abbrev_now,
+    current_rank: off.rank_now,
+    current_command: off.command_now,
+    shield_no: off.shield_no
   }));
 
-  // 3. Upsert into Supabase (Matches on tax_id)
-  const { error } = await supabase
-    .from('nypd_officers')
+  const { data, error } = await supabase
+    .from('civilian_complaint_review_board_police_officers')
     .upsert(formattedData, { onConflict: 'tax_id' });
 
-  if (error) console.error('Sync Error:', error);
-  else console.log('Successfully updated officer records!');
+  if (error) {
+    console.error("Precision Error:", error.message);
+  } else {
+    console.log("Success! Your Supabase table is now perfectly synced with NYC Open Data.");
+  }
 }
+
+syncNYPDData();
