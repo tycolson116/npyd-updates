@@ -3,30 +3,46 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 const supabase = createClient('https://lcfezxfcljjztutbuonk.supabase.co', 'sb_publishable_3XzU5p7x061I67j5_A5ong_SpcSRAOO')
 const NYC_DATA_URL = "https://data.cityofnewyork.us/resource/2fir-qns4.json"
 
-async function syncNYPDData() {
-  // Fetch from NYC Open Data Officer Profile
-  const response = await fetch("https://data.cityofnewyork.us/resource/2fir-qns4.json?$limit=50");
-  const officers = await response.json();
+async function findOfficer() {
+  const nameInput = document.getElementById('searchName').value;
+  const badgeInput = document.getElementById('searchBadge').value;
+  const resultsDiv = document.getElementById('results');
 
-  const formattedData = officers.map(off => ({
-    tax_id: parseInt(off.tax_id),
-    officer_first_name: off.first_name,
-    officer_last_name: off.last_name,
-    current_rank_abbreviation: off.rank_abbrev_now,
-    current_rank: off.rank_now,
-    current_command: off.command_now,
-    shield_no: off.shield_no
-  }));
-
-  const { data, error } = await supabase
+  // Start building the query
+  let query = supabase
     .from('civilian_complaint_review_board_police_officers')
-    .upsert(formattedData, { onConflict: 'tax_id' });
+    .select('*');
+
+  // If name is typed, search by last name
+  if (nameInput) {
+    query = query.ilike('officer_last_name', `%${nameInput}%`);
+  }
+
+  // If badge is typed, search for exact shield number match
+  if (badgeInput) {
+    query = query.eq('shield_no', badgeInput);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
-    console.error("Precision Error:", error.message);
+    resultsDiv.innerHTML = `<p>Error: ${error.message}</p>`;
+    return;
+  }
+
+  // Display the data cleanly
+  if (data.length > 0) {
+    resultsDiv.innerHTML = data.map(officer => `
+      <div class="officer-card">
+        <h3>${officer.officer_first_name} ${officer.officer_last_name}</h3>
+        <p><strong>Rank:</strong> ${officer.current_rank_abbreviation}</p>
+        <p><strong>Badge:</strong> ${officer.shield_no}</p>
+        <p><strong>Command:</strong> ${officer.current_command}</p>
+      </div>
+    `).join('');
   } else {
-    console.log("Success! Your Supabase table is now perfectly synced with NYC Open Data.");
+    resultsDiv.innerHTML = '<p>No officer found with that information.</p>';
   }
 }
 
-syncNYPDData();
+document.getElementById('searchBtn').addEventListener('click', findOfficer);
