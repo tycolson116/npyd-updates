@@ -1,48 +1,29 @@
-// 1. Initialize Supabase
-const supabaseUrl = 'https://lcfezxfcljjztutbuonk.supabase.co';
-const supabaseKey = 'sb_publishable_3XzU5p7x061I67j5_A5ong_SpcSRAOO';
-const supabase = supabasejs.createClient(supabaseUrl, supabaseKey);
+import { createClient } from '@supabase/supabase-js'
 
-document.getElementById('searchBtn').addEventListener('click', async function() {
-    const shieldQuery = document.getElementById('officerInput').value;
-    
-    if (shieldQuery) {
-        showLoading();
-        // 2. Fetch from your Supabase Database
-        const { data: officer, error } = await supabase
-            .from('officers')
-            .select('*')
-            .eq('shield_no', shieldQuery)
-            .single(); // Get one specific officer
+const supabase = createClient('https://lcfezxfcljjztutbuonk.supabase.co', 'sb_publishable_3XzU5p7x061I67j5_A5ong_SpcSRAOO')
+const NYC_DATA_URL = "https://data.cityofnewyork.us/resource/2fir-qns4.json"
 
-        if (error || !officer) {
-            document.getElementById('resultsArea').innerHTML = "<p>Officer not found in 2026 Registry.</p>";
-        } else {
-            renderOfficer(officer);
-        }
-    }
-});
+async function syncNYPDData() {
+  // 1. Fetch the latest officer data
+  const response = await fetch(`${NYC_DATA_URL}?$limit=5000`);
+  const nypdData = await response.json();
 
-function renderOfficer(officer) {
-    const resultsArea = document.getElementById('resultsArea');
-    resultsArea.classList.remove('hidden');
+  // 2. Map NYC fields to your Supabase columns
+  const formattedData = nypdData.map(officer => ({
+    tax_id: officer.tax_id,
+    officer_first_name: officer.officer_first_name,
+    officer_last_name: officer.officer_last_name,
+    officer_rank_abbreviation: officer.current_rank_abbreviation,
+    command: officer.current_command,
+    shield_no: officer.shield_no,
+    last_updated: new RegExp('as_of_date') // Tracking updates
+  }));
 
-    // Logic for dynamic CSS classes based on risk
-    const riskClass = officer.risk_level === 'High' ? 'high-risk' : 'standard-risk';
+  // 3. Upsert into Supabase (Matches on tax_id)
+  const { error } = await supabase
+    .from('nypd_officers')
+    .upsert(formattedData, { onConflict: 'tax_id' });
 
-    resultsArea.innerHTML = `
-        <div class="officer-result ${riskClass}">
-            <h2>${officer.full_name} (Shield: ${officer.shield_no})</h2>
-            <p><strong>Precinct:</strong> ${officer.precinct}</p>
-            <p><strong>CCRB Complaints:</strong> ${officer.complaint_count}</p>
-            <p><strong>Legal History:</strong> ${officer.lawsuit_history}</p>
-            <hr>
-            <h3>🛡️ Your Rights in this Precinct:</h3>
-            <p>You are in the ${officer.precinct}. Under the NYC Right to Know Act, you can request this officer's business card.</p>
-        </div>
-    `;
-}
-
-function showLoading() {
-    document.getElementById('resultsArea').innerHTML = "<p>Searching NYC Database...</p>";
+  if (error) console.error('Sync Error:', error);
+  else console.log('Successfully updated officer records!');
 }
