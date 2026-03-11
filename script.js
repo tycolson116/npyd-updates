@@ -1,48 +1,59 @@
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-const supabase = createClient('https://lcfezxfcljjztutbuonk.supabase.co', 'sb_publishable_3XzU5p7x061I67j5_A5ong_SpcSRAOO')
-const NYC_DATA_URL = "https://data.cityofnewyork.us/resource/2fir-qns4.json"
+https://lcfezxfcljjztutbuonk.supabase.co // Replace with your Supabase URL
+sb_publishable_3XzU5p7x061I67j5_A5ong_SpcSRAOO// Replace with your Supabase Anon Key
+const NYC_DATA_URL = 'https://data.cityofnewyork.us/resource/f2fr-qn54.json'; // This URL seems to be for direct API access, your Supabase setup implies you've imported this data.
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const nameInput = document.getElementById('searchName');
+const badgeInput = document.getElementById('searchBadge');
+const resultsDiv = document.getElementById('results');
+const searchButton = document.getElementById('searchBtn'); // Get the search button
 
 async function findOfficer() {
-  const nameInput = document.getElementById('searchName').value;
-  const badgeInput = document.getElementById('searchBadge').value;
-  const resultsDiv = document.getElementById('results');
+    resultsDiv.innerHTML = ''; // Clear previous results
 
-  // Start building the query
-  let query = supabase
-    .from('civilian_complaint_review_board_police_officers')
-    .select('*');
+    const nameValue = nameInput.value.trim();
+    const badgeValue = badgeInput.value.trim();
 
-  // If name is typed, search by last name
-  if (nameInput) {
-    query = query.ilike('officer_last_name', `%${nameInput}%`);
-  }
+    if (!nameValue && !badgeValue) {
+        resultsDiv.innerHTML = '<p>Please enter a last name or a badge number to search.</p>';
+        return;
+    }
 
-  // If badge is typed, search for exact shield number match
-  if (badgeInput) {
-    query = query.eq('shield_no', badgeInput);
-  }
+    let query = supabase
+        .from('civilian_complaint_review_board_officers')
+        .select('*'); // Select all columns for now, you can refine this later
 
-  const { data, error } = await query;
+    if (nameValue) {
+        // Assuming 'officer_last_name' is the column name for the last name
+        query = query.ilike('officer_last_name', `%${nameValue}%`);
+    }
 
-  if (error) {
-    resultsDiv.innerHTML = `<p>Error: ${error.message}</p>`;
-    return;
-  }
+    if (badgeValue) {
+        // Assuming 'shield_no' is the column name for the badge number
+        // If searching by both, it will add an AND condition
+        query = query.eq('shield_no', badgeValue);
+    }
 
-  // Display the data cleanly
-  if (data.length > 0) {
-    resultsDiv.innerHTML = data.map(officer => `
-      <div class="officer-card">
-        <h3>${officer.officer_first_name} ${officer.officer_last_name}</h3>
-        <p><strong>Rank:</strong> ${officer.current_rank_abbreviation}</p>
-        <p><strong>Badge:</strong> ${officer.shield_no}</p>
-        <p><strong>Command:</strong> ${officer.current_command}</p>
-      </div>
-    `).join('');
-  } else {
-    resultsDiv.innerHTML = '<p>No officer found with that information.</p>';
-  }
+    const { data, error } = await query;
+
+    if (error) {
+        resultsDiv.innerHTML = `<p>Error: ${error.message}</p>`;
+        return;
+    }
+
+    if (data && data.length > 0) {
+        resultsDiv.innerHTML = data.map(officer => `
+            <div class="officer-card">
+                <h3>${officer.officer_first_name || 'N/A'} ${officer.officer_last_name || 'N/A'}</h3>
+                <p><strong>Rank:</strong> ${officer.officer_current_rank_abbreviation || 'N/A'}</p>
+                <p><strong>Shield No:</strong> ${officer.shield_no || 'N/A'}</p>
+                <p><strong>Command:</strong> ${officer.officer_current_command || 'N/A'}</p>
+            </div>
+        `).join('');
+    } else {
+        resultsDiv.innerHTML = '<p>No officer found with that information.</p>';
+    }
 }
-
-document.getElementById('searchBtn').addEventListener('click', findOfficer);
