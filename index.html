@@ -10,16 +10,19 @@
     <div class="app-container">
         <header>
             <h1>Officer Lookup</h1>
-            <p class="subtitle">Enter Shield Number or Last Name</p>
+            <p class="subtitle">Enter Shield Number or Last Name / Badge Number</p>
         </header>
 
         <main>
-         <input type="text" id="searchName" placeholder="Search by Last Name...">
-<input type="text" id="searchBadge" placeholder="Search by Badge Number...">
-<button id="searchBtn">Search Officer</button>
+            <div class="search-box">
+                <input type="text" id="searchName" placeholder="Search by Last Name...">
+                <input type="text" id="searchBadge" placeholder="Search by Badge Number...">
+                <button id="searchBtn">Search Officer</button>
+            </div>
 
-<div id="results">
-  </div>
+            <div id="results">
+                <!-- Officer results will be displayed here -->
+            </div>
 
             <div class="rights-card">
                 <h3>Your 4th Amendment Rights</h3>
@@ -31,6 +34,7 @@
             </div>
         </main>
     </div>
-  <script type="module" src="script.js"></script>
+
+    <script type="module" src="script.js"></script>
 </body>
 </html>
