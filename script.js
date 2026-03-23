@@ -1,99 +1,108 @@
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+document.getElementById('mainBtn').addEventListener('click', function() {
+    const shield = document.getElementById('badgeSearch').value;
+    const results = document.getElementById('results');
 
-// IMPORTANT: Replace with your actual Supabase URL and Anon Key
-https://lcfezxfcljjztutbuonk.supabase.co // Your Supabase Project URL
-sb_publishable_3XzU5p7x061I67j5_A5ong_SpcSRAOO // Your Supabase Public Anon Key
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-// Get references to DOM elements
-const nameInput = document.getElementById('searchName');
-const badgeInput = document.getElementById('searchBadge');
-const resultsDiv = document.getElementById('results');
-const searchButton = document.getElementById('searchBtn'); // Assuming your button has id="searchBtn"
-
-// Function to find an officer
-async function findOfficer() {
-    resultsDiv.innerHTML = ''; // Clear previous results and any error messages
-
-    const nameValue = nameInput.value.trim();
-    const badgeValue = badgeInput.value.trim();
-
-    // Basic client-side validation
-    if (!nameValue && !badgeValue) {
-        resultsDiv.innerHTML = '<p class="error-message">Please enter an officer\'s last name or badge number to search.</p>';
-        console.error("Search attempted with no input.");
-        return; // Stop the function if no input is provided
+    // Input Validation (5 digits is typical for NYPD shields)
+    if (shield.length !== 5) {
+        alert("Please enter a valid 5-digit shield number.");
+        return;
     }
 
-    try {
-        let query = supabase
-            .from('civilian_complaint_review_board_officers') // Ensure this is your exact table name
-            .select('*'); // Select all columns for initial debugging, then refine
+    // UI Feedback: Start the 45-second countdown
+    this.innerText = "QUERYING NYC DATABASE...";
+    this.disabled = true;
+    showLoading();
 
-        let conditions = [];
+    // -------------------------------------------------------------------------
+    // Technical Implementation: The SODA API Call
+    // -------------------------------------------------------------------------
+    
+    // 1. Defining the Endpoint (This is a public sample CCRB MOS dataset)
+    const endpoint = 'https://data.cityofnewyork.us/resource/9yv4-mdfy.json';
+    
+    // 2. Formulating the SODA Query (using 'shield_no' as the filter)
+    // IMPORTANT: Actual API field names (e.g., 'shield_no') must match the dataset.
+    const queryUrl = `${endpoint}?shield_no=${shield}`;
 
-        if (nameValue) {
-            // Case-insensitive search for last name
-            // IMPORTANT: Verify 'officer_last_name' is the correct column name in your Supabase table
-            conditions.push(`officer_last_name.ilike.%${nameValue}%`);
-        }
+    // 3. The Fetch Request
+    fetch(queryUrl)
+        .then(response => {
+            if (!response.ok) {
+                // If the response is not 200 OK, handle the error
+                throw new Error(`API Error: ${response.status} ${response.statusText}`);
+            }
+            return response.json(); // Convert response to JSON
+        })
+        .then(data => {
+            // Success handler: We have data from the live API.
+            handleApiSuccess(data);
+        })
+        .catch(error => {
+            // Error handler: Handle network or dataset issues.
+            handleApiError(shield, error);
+        })
+        .finally(() => {
+            // Reset the button, regardless of success or failure.
+            document.getElementById('mainBtn').innerText = "SEARCH DATA";
+            document.getElementById('mainBtn').disabled = false;
+        });
+});
 
-        if (badgeValue) {
-            // Exact match for badge number
-            // IMPORTANT: Verify 'shield_no' is the correct column name in your Supabase table
-            conditions.push(`shield_no.eq.${badgeValue}`);
-        }
+// -----------------------------------------------------------------------------
+// Helper Functions for Data Display & Error Handling
+// -----------------------------------------------------------------------------
 
-        // Combine conditions using 'and' for multiple filters, or 'or' if you prefer
-        // For this scenario, an 'AND' is usually desired if both are provided
-        if (conditions.length > 0) {
-            query = query.filter(conditions.join(',')); // Supabase filter method
-        }
+function handleApiSuccess(data) {
+    const results = document.getElementById('results');
+    results.classList.remove('hidden');
 
-        console.log("Supabase Query Being Sent:", query.url); // Log the constructed query URL
-
-        const { data, error } = await query;
-
-        if (error) {
-            console.error("Supabase Query Error:", error);
-            resultsDiv.innerHTML = `<p class="error-message">Error fetching officer data: ${error.message}. Please check your Supabase setup and network connection.</p>`;
-            return;
-        }
-
-        if (data && data.length > 0) {
-            console.log("Officer Data Received:", data); // Log the data received
-            resultsDiv.innerHTML = data.map(officer => `
-                <div class="officer-card">
-                    <!-- IMPORTANT: Verify these column names against your Supabase table -->
-                    <h3>${officer.officer_first_name || 'N/A'} ${officer.officer_last_name || 'N/A'}</h3>
-                    <p><strong>Rank:</strong> ${officer.officer_current_rank_abbreviation || 'N/A'}</p>
-                    <p><strong>Shield No:</strong> ${officer.shield_no || 'N/A'}</p>
-                    <p><strong>Command:</strong> ${officer.officer_current_command || 'N/A'}</p>
-                </div>
-            `).join('');
-        } else {
-            resultsDiv.innerHTML = '<p class="info-message">No officer found with that information. Please check your spelling or badge number.</p>';
-            console.log("No officer found for input:", { name: nameValue, badge: badgeValue });
-        }
-    } catch (e) {
-        console.error("An unexpected error occurred:", e);
-        resultsDiv.innerHTML = `<p class="error-message">An unexpected error occurred: ${e.message}</p>`;
+    // Scenario 1: Shield number not found in this specific dataset.
+    if (data.length === 0) {
+        results.innerHTML = `
+            <div class="officer-card low-risk">
+                <h3 style="margin-top:0; color:#2ed573">NO RECORD FOUND</h3>
+                <p>This shield # does not appear in the limited CCRB dataset.</p>
+                <small style="opacity:0.5">Note: This dataset is not real-time.</small>
+            </div>
+        `;
+        return;
     }
+
+    // Scenario 2: Data successfully found (mapping real API fields)
+    const officer = data[0]; // Take the first result
+    const hasComplaints = officer.allegations_count > 0;
+    const riskStatus = hasComplaints ? "high-risk" : "low-risk";
+    const statusColor = hasComplaints ? "#ff4757" : "#2ed573";
+    const statusText = hasComplaints ? "ACTIVE CCRB HISTORY" : "NO KNOWN DISCIPLINARY RECORD";
+
+    results.innerHTML = `
+        <div class="officer-card ${riskStatus}">
+            <h3 style="margin-top:0">DATA FOUND</h3>
+            <p><strong>Name:</strong> ${officer.first_name} ${officer.last_name}</p>
+            <p><strong>Status:</strong> <span style="color:${statusColor}">${statusText}</span></p>
+            <p><strong>Command/Precinct:</strong> ${officer.current_command}</p>
+            <p><strong>CCRB Complaints:</strong> ${officer.allegations_count}</p>
+            <p><strong>Substantiated Allegations:</strong> ${officer.substantiated_count || 0}</p>
+            <small style="opacity:0.5">Verified Source: NYC Open Data / CCRB MOS Records</small>
+        </div>
+    `;
 }
 
-// Attach the event listener to the search button
-searchButton.addEventListener('click', findOfficer);
+function handleApiError(shield, error) {
+    console.error("ShieldCheck Error:", error);
+    const results = document.getElementById('results');
+    results.classList.remove('hidden');
+    results.innerHTML = `
+        <div class="officer-card high-risk">
+            <h3 style="margin-top:0">API CONNECTION ERROR</h3>
+            <p>Could not connect to the NYC Open Data endpoint.</p>
+            <p><small>${error.message}</small></p>
+            <small style="opacity:0.5">Retry search in a moment.</small>
+        </div>
+    `;
+}
 
-// Optional: Add a small CSS style for error messages (you can add this to styles.css)
-/*
-.error-message {
-    color: #ff4d4d;
-    font-weight: bold;
-    margin-top: 10px;
-}
-.info-message {
-    color: #6daffc;
-    margin-top: 10px;
-}
-*/
+function showLoading() {
+    document.getElementById('results').innerHTML = `<p style="text-align:center; opacity:0.6;">Connecting to NYC Data...</p>`;
+    document.getElementById('results').classList.remove('hidden');
+} 
