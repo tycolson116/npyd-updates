@@ -24,6 +24,20 @@ document.getElementById('mainBtn').addEventListener('click', function() {
     // IMPORTANT: Actual API field names (e.g., 'shield_no') must match the dataset.
     const queryUrl = `${endpoint}?shield_no=${shield}`;
 
+// 1. Select the element
+const myButton = document.querySelector('#my-button');
+
+// 2. Check if it actually exists before adding the listener
+if (myButton) {
+    myButton.addEventListener('click', () => {
+        console.log("Button was clicked successfully!");
+    });
+} else {
+    console.warn("Element #my-button was not found in the DOM.");
+}
+
+
+    
     // 3. The Fetch Request
     fetch(queryUrl)
         .then(response => {
