@@ -1,27 +1,21 @@
-// 1. Reference the elements
-const searchBtn = document.getElementById('searchBtn');
-const nameInput = document.getElementById('searchName');
-const badgeInput = document.getElementById('searchBadge');
-const resultsDiv = document.getElementById('results');
+// 1. Use the EXACT ID from your HTML ('searchBtn')
+const searchButton = document.getElementById('searchBtn');
 
-// 2. Add the Event Listener
-if (searchBtn) {
-    searchBtn.addEventListener('click', () => {
-        const name = nameInput.value;
-        const badge = badgeInput.value;
-        
-        console.log("Button clicked! Searching for:", name, badge);
-        
-        // Trigger your database search function here
-        fetchOfficerData(name, badge);
+// 2. Add a check to make sure the button was found
+if (searchButton) {
+    searchButton.addEventListener('click', () => {
+        console.log("Button clicked! Connecting to database...");
+        handleSearch(); 
     });
+} else {
+    // This will help you debug if the ID is still wrong
+    console.error("Error: Could not find the button with ID 'searchBtn'");
 }
 
-// 3. Your Database Function
-async function fetchOfficerData(name, badge) {
-    resultsDiv.innerHTML = "Searching database...";
+function handleSearch() {
+    const name = document.getElementById('searchName').value;
+    const badge = document.getElementById('searchBadge').value;
     
-    // This is where you will add your Supabase or API call logic
-    // Example: 
-    // const { data, error } = await supabase.from('officers').select('*').eq('badge', badge);
+    // This is where you'll see your inputs in the console
+    console.log(`Searching database for Officer: ${name}, Badge: ${badge}`);
 }
