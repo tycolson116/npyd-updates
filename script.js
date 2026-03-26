@@ -1,103 +1,67 @@
 async function handleSearch() {
-    const badge = document.getElementById('searchBadge').value.trim();
+    // 1. Defensively select elements
+    const searchBadge = document.getElementById('searchBadge');
     const resultsDiv = document.getElementById('results');
     
+    // Safety Check: If the HTML elements are missing, stop immediately without an error
+    if (!searchBadge || !resultsDiv) return;
+
+    const badge = searchBadge.value.trim();
+    
     if (!badge) {
-        resultsDiv.innerHTML = "<p class='error-msg'>⚠️ Please enter a Badge Number.</p>";
+        resultsDiv.innerHTML = "<p style='color: orange;'>⚠️ Please enter a Badge Number.</p>";
         return;
     }
 
-    resultsDiv.innerHTML = "<div class='loader'>Searching NYPD & CCRB Records...</div>";
+    resultsDiv.innerHTML = "<div class='loader'>Connecting to Database...</div>";
 
     try {
-        // 1. Fetch Officer Profile - Ensuring we get the names
+        // 2. Fetch Officer Data
         const { data: officer, error: officerError } = await supabase
             .from('civilian_complaint_review_board_police_officers')
-            .select('officer_first_name, officer_last_name, current_rank, tax_id, current_command')
+            .select('*')
             .eq('shield_no', badge)
-            .maybeSingle();
+            .maybeSingle(); // This prevents the 'null' error if badge is wrong
 
         if (officerError) throw officerError;
         
         if (!officer) {
-            resultsDiv.innerHTML = `<p class='error-msg'>No officer found with Badge #${badge}.</p>`;
+            resultsDiv.innerHTML = `<p>No records found for Badge #${badge}.</p>`;
             return;
         }
 
-        // 2. Fetch All CCRB Complaints using the Tax ID
+        // 3. Fetch Complaints
         const { data: complaints, error: complaintsError } = await supabase
             .from('ccrb_complaints_nyc')
             .select('*')
-            .eq('Tax ID', officer.tax_id)
-            .order('As Of Date', { ascending: false });
+            .eq('Tax ID', officer.tax_id);
 
         if (complaintsError) throw complaintsError;
 
-        // 3. Pass both to the display function
-        renderComprehensiveTable(officer, complaints);
+        // 4. Render with "Null Checks" for headings
+        renderResults(officer, complaints || []);
 
     } catch (err) {
-        console.error("Database Error:", err.message);
-        resultsDiv.innerHTML = `
-            <div class='error-container'>
-                <p><strong>Connection Error:</strong> Could not retrieve data.</p>
-                <p><small>${err.message}</small></p>
-            </div>`;
+        // This catches ANY unexpected error and displays a clean message
+        resultsDiv.innerHTML = `<p class='error'>System Note: ${err.message}</p>`;
     }
 }
 
-function renderComprehensiveTable(officer, complaints) {
+function renderResults(officer, complaints) {
     const resultsDiv = document.getElementById('results');
     
-    // Formatting the name properly for the heading
-    const firstName = officer.officer_first_name || "Unknown";
-    const lastName = officer.officer_last_name || "Officer";
-    const rank = officer.current_rank || "Member of Service";
+    // Safety logic for headings: if a name is missing, use a fallback
+    const fName = officer.officer_first_name || "";
+    const lName = officer.officer_last_name || "Officer";
+    const rank = officer.current_rank || "NYPD";
 
-    let html = `
-        <div class="officer-profile-card">
-            <header class="results-header">
-                <h2>${rank} ${firstName} ${lastName}</h2>
-                <div class="officer-meta">
-                    <span><strong>Tax ID:</strong> ${officer.tax_id}</span> | 
-                    <span><strong>Current Command:</strong> ${officer.current_command || 'N/A'}</span>
-                </div>
-            </header>
+    resultsDiv.innerHTML = `
+        <div class="header-container">
+            <h2>${rank} ${fName} ${lName}</h2>
+            <p><strong>Tax ID:</strong> ${officer.tax_id || 'N/A'}</p>
         </div>
-        
-        <div class="table-container">
-            <h3>CCRB Allegation History (${complaints.length} Records)</h3>
-            <table class="ccrb-table">
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Complaint ID</th>
-                        <th>FADO Type</th>
-                        <th>Allegation</th>
-                        <th>CCRB Disposition</th>
-                        <th>NYPD Disposition</th>
-                    </tr>
-                </thead>
-                <tbody>
+        <div class="history-section">
+            <p>Total CCRB Records Found: ${complaints.length}</p>
+            </div>
     `;
-
-    if (complaints && complaints.length > 0) {
-        complaints.forEach(c => {
-            html += `
-                <tr>
-                    <td>${c['As Of Date'] || 'N/A'}</td>
-                    <td>${c['Complaint Id'] || 'N/A'}</td>
-                    <td>${c['FADO Type'] || 'N/A'}</td>
-                    <td>${c['Allegation'] || 'N/A'}</td>
-                    <td class="disposition-cell">${c['CCRB Allegation Disposition'] || 'Pending'}</td>
-                    <td>${c['NYPD Allegation Disposition'] || 'N/A'}</td>
-                </tr>
-            `;
-        });
-    } else {
-        html += "<tr><td colspan='6' class='no-results'>No formal CCRB complaints found for this Tax ID.</td></tr>";
-    }
-
-    html += `</tbody></table></div>`;
-    resultsDiv.innerHTML = html;
 }
