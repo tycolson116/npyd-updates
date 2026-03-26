@@ -2,7 +2,6 @@ async function handleSearch() {
     const badge = document.getElementById('searchBadge').value.trim();
     const resultsDiv = document.getElementById('results');
     
-    // Initial validation
     if (!badge) {
         resultsDiv.innerHTML = "<p class='error-msg'>⚠️ Please enter a Badge Number.</p>";
         return;
@@ -11,12 +10,12 @@ async function handleSearch() {
     resultsDiv.innerHTML = "<div class='loader'>Searching NYPD & CCRB Records...</div>";
 
     try {
-        // 1. Fetch Officer Profile
+        // 1. Fetch Officer Profile - Ensuring we get the names
         const { data: officer, error: officerError } = await supabase
             .from('civilian_complaint_review_board_police_officers')
-            .select('*')
+            .select('officer_first_name, officer_last_name, current_rank, tax_id, current_command')
             .eq('shield_no', badge)
-            .maybeSingle(); // Returns null instead of error if not found
+            .maybeSingle();
 
         if (officerError) throw officerError;
         
@@ -25,7 +24,7 @@ async function handleSearch() {
             return;
         }
 
-        // 2. Fetch All CCRB Complaints using Tax ID
+        // 2. Fetch All CCRB Complaints using the Tax ID
         const { data: complaints, error: complaintsError } = await supabase
             .from('ccrb_complaints_nyc')
             .select('*')
@@ -34,14 +33,14 @@ async function handleSearch() {
 
         if (complaintsError) throw complaintsError;
 
-        // 3. Display Data
+        // 3. Pass both to the display function
         renderComprehensiveTable(officer, complaints);
 
     } catch (err) {
         console.error("Database Error:", err.message);
         resultsDiv.innerHTML = `
             <div class='error-container'>
-                <p><strong>Connection Error:</strong> Could not reach the database.</p>
+                <p><strong>Connection Error:</strong> Could not retrieve data.</p>
                 <p><small>${err.message}</small></p>
             </div>`;
     }
@@ -50,47 +49,55 @@ async function handleSearch() {
 function renderComprehensiveTable(officer, complaints) {
     const resultsDiv = document.getElementById('results');
     
+    // Formatting the name properly for the heading
+    const firstName = officer.officer_first_name || "Unknown";
+    const lastName = officer.officer_last_name || "Officer";
+    const rank = officer.current_rank || "Member of Service";
+
     let html = `
-        <div class="officer-header">
-            <h2>${officer.current_rank} ${officer.officer_first_name} ${officer.officer_last_name}</h2>
-            <p><strong>Tax ID:</strong> ${officer.tax_id} | <strong>Current Command:</strong> ${officer.current_command}</p>
+        <div class="officer-profile-card">
+            <header class="results-header">
+                <h2>${rank} ${firstName} ${lastName}</h2>
+                <div class="officer-meta">
+                    <span><strong>Tax ID:</strong> ${officer.tax_id}</span> | 
+                    <span><strong>Current Command:</strong> ${officer.current_command || 'N/A'}</span>
+                </div>
+            </header>
         </div>
         
-        <h3>CCRB Detailed History</h3>
-        <table class="ccrb-table">
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Complaint ID</th>
-                    <th>FADO Type</th>
-                    <th>Allegation</th>
-                    <th>Board Disposition</th>
-                    <th>NYPD Disposition</th>
-                    <th>Command at Incident</th>
-                </tr>
-            </thead>
-            <tbody>
+        <div class="table-container">
+            <h3>CCRB Allegation History (${complaints.length} Records)</h3>
+            <table class="ccrb-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Complaint ID</th>
+                        <th>FADO Type</th>
+                        <th>Allegation</th>
+                        <th>CCRB Disposition</th>
+                        <th>NYPD Disposition</th>
+                    </tr>
+                </thead>
+                <tbody>
     `;
 
     if (complaints && complaints.length > 0) {
         complaints.forEach(c => {
-            // Using bracket notation for NYC Open Data headers with spaces
             html += `
                 <tr>
                     <td>${c['As Of Date'] || 'N/A'}</td>
-                    <td>${c['Complaint Id']}</td>
-                    <td>${c['FADO Type']}</td>
-                    <td>${c['Allegation']}</td>
-                    <td class="status">${c['CCRB Allegation Disposition']}</td>
-                    <td>${c['NYPD Allegation Disposition']}</td>
-                    <td>${c['Officer Command At Incident']}</td>
+                    <td>${c['Complaint Id'] || 'N/A'}</td>
+                    <td>${c['FADO Type'] || 'N/A'}</td>
+                    <td>${c['Allegation'] || 'N/A'}</td>
+                    <td class="disposition-cell">${c['CCRB Allegation Disposition'] || 'Pending'}</td>
+                    <td>${c['NYPD Allegation Disposition'] || 'N/A'}</td>
                 </tr>
             `;
         });
     } else {
-        html += "<tr><td colspan='7'>No CCRB complaints found for this officer.</td></tr>";
+        html += "<tr><td colspan='6' class='no-results'>No formal CCRB complaints found for this Tax ID.</td></tr>";
     }
 
-    html += `</tbody></table>`;
+    html += `</tbody></table></div>`;
     resultsDiv.innerHTML = html;
 }
