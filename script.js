@@ -1,3 +1,7 @@
+// Mr. Webster's Notes:
+// Tymauri you need to add your initialization code here to connect your project to Supabase. 
+// You'll need to insert your database URL and the public key in order to ensure it is hooked and you can read and write from it.
+
 document.getElementById('searchBtn').addEventListener('click', function() {
     const query = document.getElementById('officerInput').value;
     const resultsArea = document.getElementById('resultsArea');
