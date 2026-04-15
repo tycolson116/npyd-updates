@@ -2,11 +2,9 @@ async function handleSearch() {
     // 1. Defensively select elements
     const searchBadge = document.getElementById('searchBadge');
     const resultsDiv = document.getElementById('results');
-    
-    // Safety Check: If the HTML elements are missing, stop immediately without an error
+    https://lcfezxfcljjztutbuonk.supabase.co    // Safety Check: If the HTML elements are missing, stop immediately without an error
     if (!searchBadge || !resultsDiv) return;
-
-    const badge = searchBadge.value.trim();
+sb_publishable_3XzU5p7x061I67j5_A5ong_SpcSRAOO    const badge = searchBadge.value.trim();
     
     if (!badge) {
         resultsDiv.innerHTML = "<p style='color: orange;'>⚠️ Please enter a Badge Number.</p>";
