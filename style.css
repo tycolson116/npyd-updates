@@ -73,3 +73,10 @@ button:hover { background: #2563eb; }
 .rights-card h3 { margin-top: 0; color: #3b82f6; }
 ul { padding-left: 20px; }
 li { margin-bottom: 10px; font-size: 0.95rem; }
+
+#results {
+    min-height: 50px;
+    margin-top: 20px;
+    width: 100%;
+    display: block !important; /* Forces it to show */
+}
