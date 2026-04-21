@@ -4,8 +4,7 @@ const supabaseKey = 'sb_publishable_3XzU5p7x061I67j5_A5ong_SpcSRAOO';
 const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
 // 2. NYC Open Data App Token (PASTE YOUR TOKEN BELOW)
-const appToken = 'YOUR_APP_TOKEN_HERE'; 
-
+const appToken = 9p0TgBMkCYRPZL3TktXvecvWb
 // 3. Set up Event Listener
 document.getElementById('searchBtn').addEventListener('click', handleSearch);
 
