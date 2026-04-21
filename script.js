@@ -1,46 +1,56 @@
+// 1. Initialize Supabase
+const supabaseUrl = 'https://lcfezxfcljjztutbuonk.supabase.co';
+const supabaseKey = 'sb_publishable_3XzU5p7x061I67j5_A5ong_SpcSRAOO';
+const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+
+// 2. Set up Event Listener
+document.getElementById('searchBtn').addEventListener('click', handleSearch);
+
 async function handleSearch() {
-    // 1. Defensively select elements
-    const searchBadge = document.getElementById('searchBadge');
+    const searchName = document.getElementById('searchName').value.trim().toUpperCase();
+    const searchBadge = document.getElementById('searchBadge').value.trim();
     const resultsDiv = document.getElementById('results');
-    https://lcfezxfcljjztutbuonk.supabase.co    // Safety Check: If the HTML elements are missing, stop immediately without an error
-    if (!searchBadge || !resultsDiv) return;
-sb_publishable_3XzU5p7x061I67j5_A5ong_SpcSRAOO    const badge = searchBadge.value.trim();
-    
-    if (!badge) {
-        resultsDiv.innerHTML = "<p style='color: orange;'>⚠️ Please enter a Badge Number.</p>";
+
+    if (!searchName && !searchBadge) {
+        resultsDiv.innerHTML = "<p style='color: orange;'>⚠️ Please enter a Name or Badge Number.</p>";
         return;
     }
 
-    resultsDiv.innerHTML = "<div class='loader'>Connecting to Database...</div>";
+    resultsDiv.innerHTML = "<div class='loader'>Searching NYC Open Data...</div>";
 
     try {
-        // 2. Fetch Officer Data
-        const { data: officer, error: officerError } = await supabase
-            .from('civilian_complaint_review_board_police_officers')
-            .select('*')
-            .eq('shield_no', badge)
-            .maybeSingle(); // This prevents the 'null' error if badge is wrong
+        // 3. Construct the API URL (Querying NYC Open Data)
+        let apiURL = `https://data.cityofnewyork.us/resource/2fir-qns4.json`;
+        if (searchBadge) {
+            apiURL += `?shield_no=${searchBadge}`;
+        } else if (searchName) {
+            apiURL += `?last_name=${searchName}`;
+        }
 
-        if (officerError) throw officerError;
-        
-        if (!officer) {
-            resultsDiv.innerHTML = `<p>No records found for Badge #${badge}.</p>`;
+        const response = await fetch(apiURL);
+        const officerData = await response.json();
+
+        if (!officerData || officerData.length === 0) {
+            resultsDiv.innerHTML = `<p>No live records found for your search.</p>`;
             return;
         }
 
-        // 3. Fetch Complaints
-        const { data: complaints, error: complaintsError } = await supabase
+        // We take the first match from the live API
+        const liveOfficer = officerData[0];
+
+        // 4. Fetch Historical Complaints from your Supabase
+        // Note: The API uses 'officer_id', which matches your 'Tax ID'
+        const { data: complaints, error: complaintsError } = await supabaseClient
             .from('ccrb_complaints_nyc')
             .select('*')
-            .eq('Tax ID', officer.tax_id);
+            .eq('Tax ID', liveOfficer.officer_id);
 
-        if (complaintsError) throw complaintsError;
+        if (complaintsError) console.warn("Supabase Error:", complaintsError.message);
 
-        // 4. Render with "Null Checks" for headings
-        renderResults(officer, complaints || []);
+        // 5. Render live and archived data together
+        renderResults(liveOfficer, complaints || []);
 
     } catch (err) {
-        // This catches ANY unexpected error and displays a clean message
         resultsDiv.innerHTML = `<p class='error'>System Note: ${err.message}</p>`;
     }
 }
@@ -48,18 +58,25 @@ sb_publishable_3XzU5p7x061I67j5_A5ong_SpcSRAOO    const badge = searchBadge.valu
 function renderResults(officer, complaints) {
     const resultsDiv = document.getElementById('results');
     
-    // Safety logic for headings: if a name is missing, use a fallback
-    const fName = officer.officer_first_name || "";
-    const lName = officer.officer_last_name || "Officer";
-    const rank = officer.current_rank || "NYPD";
+    // API field names: first_name, last_name, rank_now, officer_id
+    const fName = officer.first_name || "";
+    const lName = officer.last_name || "Officer";
+    const rank = officer.rank_now || "NYPD";
+    const command = officer.current_command || "Unknown Command";
 
     resultsDiv.innerHTML = `
-        <div class="header-container">
-            <h2>${rank} ${fName} ${lName}</h2>
-            <p><strong>Tax ID:</strong> ${officer.tax_id || 'N/A'}</p>
-        </div>
-        <div class="history-section">
-            <p>Total CCRB Records Found: ${complaints.length}</p>
+        <div class="officer-result ${complaints.length > 5 ? 'high-risk' : ''}">
+            <div class="header-container">
+                <h2>${rank} ${fName} ${lName}</h2>
+                <p><strong>Badge/Shield:</strong> #${officer.shield_no || 'N/A'}</p>
+                <p><strong>Command:</strong> ${command}</p>
+                <p><strong>Tax ID:</strong> ${officer.officer_id || 'N/A'}</p>
             </div>
+            <hr style="border: 0; border-top: 1px solid #334155; margin: 15px 0;">
+            <div class="history-section">
+                <p><strong>Historical CCRB Complaints:</strong> ${complaints.length}</p>
+                ${complaints.length > 0 ? `<p style="font-size: 0.9rem; color: #94a3b8;">Latest allegation: ${complaints[0].Allegation || 'See Archive'}</p>` : ''}
+            </div>
+        </div>
     `;
 }
