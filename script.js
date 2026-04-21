@@ -1,12 +1,22 @@
-// 1. Initialize Supabase
+// 1. Initialize Supabase correctly for Modules
+// This ensures 'createClient' is extracted from the global supabase object
+const { createClient } = supabase;
+
 const supabaseUrl = 'https://lcfezxfcljjztutbuonk.supabase.co';
 const supabaseKey = 'sb_publishable_3XzU5p7x061I67j5_A5ong_SpcSRAOO';
-const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
-// 2. NYC Open Data App Token (PASTE YOUR TOKEN BELOW)
-const appToken = '9p0TgBMkCYRPZL3TktXvecvWb'
-// 3. Set up Event Listener
-document.getElementById('searchBtn').addEventListener('click', handleSearch);
+// 2. NYC Open Data App Token
+const appToken = '9p0TgBMkCYRPZL3TktXvecvWb';
+
+// 3. Set up Event Listener inside DOMContentLoaded
+// This ensures the button exists before we try to attach the click event
+document.addEventListener('DOMContentLoaded', () => {
+    const searchBtn = document.getElementById('searchBtn');
+    if (searchBtn) {
+        searchBtn.addEventListener('click', handleSearch);
+    }
+});
 
 async function handleSearch() {
     const searchName = document.getElementById('searchName').value.trim().toUpperCase();
@@ -21,15 +31,17 @@ async function handleSearch() {
     resultsDiv.innerHTML = "<div class='loader'>Searching NYC Open Data...</div>";
 
     try {
-        // 4. Construct the API URL
+        // 4. Construct the API URL using $where for better filtering
+        // NYC Open Data is case-sensitive, so we use upper() for names
         let apiURL = `https://data.cityofnewyork.us/resource/2fir-qns4.json`;
+        
         if (searchBadge) {
-            apiURL += `?shield_no=${searchBadge}`;
+            apiURL += `?$where=shield_no='${searchBadge}'`;
         } else if (searchName) {
-            apiURL += `?last_name=${searchName}`;
+            apiURL += `?$where=upper(last_name)='${searchName}'`;
         }
 
-        // 5. Fetch from NYC Open Data WITH App Token Headers
+        // 5. Fetch from NYC Open Data
         const response = await fetch(apiURL, {
             method: 'GET',
             headers: {
@@ -52,6 +64,7 @@ async function handleSearch() {
         const liveOfficer = officerData[0];
 
         // 6. Fetch Historical Complaints from Supabase
+        // Note: The NYC API returns 'officer_id', which we match to your 'Tax ID'
         const { data: complaints, error: complaintsError } = await supabaseClient
             .from('ccrb_complaints_nyc')
             .select('*')
@@ -63,6 +76,7 @@ async function handleSearch() {
 
     } catch (err) {
         resultsDiv.innerHTML = `<p class='error'>System Note: ${err.message}</p>`;
+        console.error("Full Error:", err);
     }
 }
 
@@ -74,7 +88,6 @@ function renderResults(officer, complaints) {
     const rank = officer.rank_now || "NYPD";
     const command = officer.current_command || "Unknown Command";
 
-    // High risk logic: If more than 5 complaints, add a visual warning
     const isHighRisk = complaints.length > 5;
 
     resultsDiv.innerHTML = `
