@@ -64,5 +64,10 @@ button {
     padding: 15px;
     border-radius: 12px;
 }
-
+#results {
+    min-height: 50px;
+    margin-top: 20px;
+    width: 100%;
+    display: block !important; /* Forces it to show */
+}
 .hidden { display: none; }
