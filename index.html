@@ -2,25 +2,25 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Officer Lookup App</title>
-    </head>
+    <link rel="stylesheet" href="style.css">
+</head>
 <body>
-
     <div class="app-container">
         <header>
             <h1>Officer Lookup</h1>
-            <p class="subtitle">Enter Shield Number or Last Name / Badge Number</p>
+            <p class="subtitle">Search NYC Open Data Live</p>
         </header>
 
         <main>
-            <div class="search-box">
-                <input type="text" id="searchName" placeholder="Search by Last Name...">
-                <input type="text" id="searchBadge" placeholder="Search by Badge Number...">
+            <div class="search-box" style="display: flex; flex-direction: column; gap: 10px;">
+                <input type="text" id="searchName" placeholder="Search by Last Name (e.g. Smith)">
+                <input type="text" id="searchBadge" placeholder="Search by Badge Number (e.g. 1234)">
                 <button id="searchBtn">Search Officer</button>
             </div>
 
-            <div id="results">
-                </div>
+            <div id="results"></div>
 
             <div class="rights-card">
                 <h3>Your 4th Amendment Rights</h3>
@@ -33,6 +33,7 @@
         </main>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script type="module" src="script.js"></script>
 </body>
 </html>
