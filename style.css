@@ -14,6 +14,7 @@ body {
     margin: 0;
     display: flex;
     justify-content: center;
+    min-height: 100vh;
 }
 
 .app-container {
@@ -22,40 +23,43 @@ body {
     padding: 20px;
 }
 
-.search-box {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 20px;
-}
+header h1 { margin-bottom: 5px; color: #3b82f6; }
+.subtitle { margin-top: 0; color: #94a3b8; font-size: 0.9rem; }
+
+.search-box { margin-bottom: 25px; }
 
 input {
-    flex: 1;
     padding: 15px;
     border-radius: 8px;
     border: 1px solid #334155;
     background: var(--card);
     color: white;
-    font-size: 1.1rem;
+    font-size: 1rem;
 }
 
 button {
-    padding: 15px 25px;
+    padding: 15px;
     border-radius: 8px;
     border: none;
     background: #3b82f6;
     color: white;
     font-weight: bold;
     cursor: pointer;
+    transition: background 0.2s;
 }
+
+button:hover { background: #2563eb; }
 
 .officer-result {
     background: var(--card);
     padding: 20px;
     border-radius: 12px;
-    border-left: 8px solid var(--warning);
+    border-left: 8px solid var(--safe);
     margin-bottom: 20px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
+/* Red border if the officer has many complaints */
 .officer-result.high-risk { border-left-color: var(--danger); }
 
 .rights-card {
@@ -63,6 +67,9 @@ button {
     border: 1px solid #3b82f6;
     padding: 15px;
     border-radius: 12px;
+    margin-top: 30px;
 }
 
-.hidden { display: none; }
+.rights-card h3 { margin-top: 0; color: #3b82f6; }
+ul { padding-left: 20px; }
+li { margin-bottom: 10px; font-size: 0.95rem; }
