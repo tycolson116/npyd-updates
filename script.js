@@ -68,8 +68,11 @@ async function handleSearch() {
         const { data: complaints, error: complaintsError } = await supabaseClient
             .from('ccrb_complaints_nyc')
             .select('*')
-            .eq('Tax ID', liveOfficer.officer_id);
-
+const taxId = liveOfficer.officer_id || liveOfficer.tax_id; // Check both common names
+const { data: complaints, error: complaintsError } = await supabaseClient
+    .from('ccrb_complaints_nyc')
+    .select('*')
+    .eq('Tax ID', taxId);
         if (complaintsError) console.warn("Supabase Error:", complaintsError.message);
 
         renderResults(liveOfficer, complaints || []);
