@@ -55,6 +55,7 @@ async function handleSearch() {
         }
 
         const officerData = await response.json();
+        console.log("API Data Received:", officerData); // <-- Add this!
 
         if (!officerData || officerData.length === 0) {
             resultsDiv.innerHTML = `<p>No live records found for your search.</p>`;
