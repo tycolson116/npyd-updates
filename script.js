@@ -87,28 +87,18 @@ const { data: complaints, error: complaintsError } = await supabaseClient
 function renderResults(officer, complaints) {
     const resultsDiv = document.getElementById('results');
     
-    const fName = officer.first_name || "";
-    const lName = officer.last_name || "Officer";
-    const rank = officer.rank_now || "NYPD";
-    const command = officer.current_command || "Unknown Command";
-
-    const isHighRisk = complaints.length > 5;
+    // Ensure we are pulling the right fields from the NYC API response
+    const fName = officer.first_name || "N/A";
+    const lName = officer.last_name || "N/A";
+    const badge = officer.shield_no || "N/A";
 
     resultsDiv.innerHTML = `
-        <div class="officer-result ${isHighRisk ? 'high-risk' : ''}">
-            <div class="header-container">
-                <h2>${rank} ${fName} ${lName}</h2>
-                <p><strong>Badge/Shield:</strong> #${officer.shield_no || 'N/A'}</p>
-                <p><strong>Command:</strong> ${command}</p>
-                <p><strong>Tax ID:</strong> ${officer.officer_id || 'N/A'}</p>
-            </div>
-            <hr style="border: 0; border-top: 1px solid #334155; margin: 15px 0;">
-            <div class="history-section">
-                <p><strong>Historical CCRB Complaints:</strong> ${complaints.length}</p>
-                ${complaints.length > 0 ? 
-                    `<p style="font-size: 0.9rem; color: #94a3b8;"><strong>Latest recorded allegation:</strong> ${complaints[0].Allegation || 'N/A'}</p>` 
-                    : '<p style="color: #2ed573;">No historical complaints found in local archive.</p>'}
-            </div>
+        <div class="officer-result">
+            <h3>${officer.rank_now || 'Officer'} ${fName} ${lName}</h3>
+            <p><strong>Badge:</strong> #${badge}</p>
+            <p><strong>Command:</strong> ${officer.current_command || 'Unknown'}</p>
+            <hr>
+            <p><strong>Complaint Records:</strong> ${complaints ? complaints.length : 0}</p>
         </div>
     `;
 }
