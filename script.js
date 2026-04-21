@@ -1,6 +1,5 @@
-// 1. Initialize Supabase correctly for Modules
-// This ensures 'createClient' is extracted from the global supabase object
-const { createClient } = supabase;
+// 1. Correctly grab the createClient function from the global window
+const { createClient } = window.supabase;
 
 const supabaseUrl = 'https://lcfezxfcljjztutbuonk.supabase.co';
 const supabaseKey = 'sb_publishable_3XzU5p7x061I67j5_A5ong_SpcSRAOO';
@@ -9,8 +8,7 @@ const supabaseClient = createClient(supabaseUrl, supabaseKey);
 // 2. NYC Open Data App Token
 const appToken = '9p0TgBMkCYRPZL3TktXvecvWb';
 
-// 3. Set up Event Listener inside DOMContentLoaded
-// This ensures the button exists before we try to attach the click event
+// 3. Ensure the button is ready before attaching the event
 document.addEventListener('DOMContentLoaded', () => {
     const searchBtn = document.getElementById('searchBtn');
     if (searchBtn) {
@@ -19,9 +17,12 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function handleSearch() {
-    const searchName = document.getElementById('searchName').value.trim().toUpperCase();
-    const searchBadge = document.getElementById('searchBadge').value.trim();
+    const searchNameInput = document.getElementById('searchName');
+    const searchBadgeInput = document.getElementById('searchBadge');
     const resultsDiv = document.getElementById('results');
+
+    const searchName = searchNameInput ? searchNameInput.value.trim().toUpperCase() : "";
+    const searchBadge = searchBadgeInput ? searchBadgeInput.value.trim() : "";
 
     if (!searchName && !searchBadge) {
         resultsDiv.innerHTML = "<p style='color: orange;'>⚠️ Please enter a Name or Badge Number.</p>";
@@ -31,17 +32,14 @@ async function handleSearch() {
     resultsDiv.innerHTML = "<div class='loader'>Searching NYC Open Data...</div>";
 
     try {
-        // 4. Construct the API URL using $where for better filtering
-        // NYC Open Data is case-sensitive, so we use upper() for names
+        // 4. Using $where for better API response
         let apiURL = `https://data.cityofnewyork.us/resource/2fir-qns4.json`;
-        
         if (searchBadge) {
             apiURL += `?$where=shield_no='${searchBadge}'`;
         } else if (searchName) {
             apiURL += `?$where=upper(last_name)='${searchName}'`;
         }
 
-        // 5. Fetch from NYC Open Data
         const response = await fetch(apiURL, {
             method: 'GET',
             headers: {
@@ -50,12 +48,9 @@ async function handleSearch() {
             }
         });
 
-        if (!response.ok) {
-            throw new Error(`API Error: ${response.status} ${response.statusText}`);
-        }
+        if (!response.ok) throw new Error(`API Error: ${response.status}`);
 
         const officerData = await response.json();
-        console.log("API Data Received:", officerData); // <-- Add this!
 
         if (!officerData || officerData.length === 0) {
             resultsDiv.innerHTML = `<p>No live records found for your search.</p>`;
@@ -64,41 +59,40 @@ async function handleSearch() {
 
         const liveOfficer = officerData[0];
 
-        // 6. Fetch Historical Complaints from Supabase
-        // Note: The NYC API returns 'officer_id', which we match to your 'Tax ID'
+        // 5. Query Supabase using the ID from the API
         const { data: complaints, error: complaintsError } = await supabaseClient
             .from('ccrb_complaints_nyc')
             .select('*')
-const taxId = liveOfficer.officer_id || liveOfficer.tax_id; // Check both common names
-const { data: complaints, error: complaintsError } = await supabaseClient
-    .from('ccrb_complaints_nyc')
-    .select('*')
-    .eq('Tax ID', taxId);
+            .eq('Tax ID', liveOfficer.officer_id);
+
         if (complaintsError) console.warn("Supabase Error:", complaintsError.message);
 
         renderResults(liveOfficer, complaints || []);
 
     } catch (err) {
         resultsDiv.innerHTML = `<p class='error'>System Note: ${err.message}</p>`;
-        console.error("Full Error:", err);
+        console.error(err);
     }
 }
 
 function renderResults(officer, complaints) {
     const resultsDiv = document.getElementById('results');
     
-    // Ensure we are pulling the right fields from the NYC API response
-    const fName = officer.first_name || "N/A";
-    const lName = officer.last_name || "N/A";
-    const badge = officer.shield_no || "N/A";
+    const fName = officer.first_name || "";
+    const lName = officer.last_name || "Officer";
+    const rank = officer.rank_now || "NYPD";
 
     resultsDiv.innerHTML = `
-        <div class="officer-result">
-            <h3>${officer.rank_now || 'Officer'} ${fName} ${lName}</h3>
-            <p><strong>Badge:</strong> #${badge}</p>
-            <p><strong>Command:</strong> ${officer.current_command || 'Unknown'}</p>
+        <div class="officer-result ${complaints.length > 5 ? 'high-risk' : ''}">
+            <div class="header-container">
+                <h2>${rank} ${fName} ${lName}</h2>
+                <p><strong>Badge/Shield:</strong> #${officer.shield_no || 'N/A'}</p>
+                <p><strong>Command:</strong> ${officer.current_command || 'N/A'}</p>
+            </div>
             <hr>
-            <p><strong>Complaint Records:</strong> ${complaints ? complaints.length : 0}</p>
+            <div class="history-section">
+                <p><strong>Historical CCRB Complaints:</strong> ${complaints.length}</p>
+            </div>
         </div>
     `;
 }
