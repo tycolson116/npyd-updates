@@ -75,8 +75,10 @@ ul { padding-left: 20px; }
 li { margin-bottom: 10px; font-size: 0.95rem; }
 
 #results {
-    min-height: 50px;
+    display: block !important;
+    min-height: 100px;
+    background: rgba(255, 255, 255, 0.05); /* Light tint so you can see where it is */
     margin-top: 20px;
-    width: 100%;
-    display: block !important; /* Forces it to show */
+    padding: 10px;
+    border-radius: 8px;
 }
