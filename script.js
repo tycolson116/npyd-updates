@@ -32,4 +32,82 @@ function renderResults(officer, complaints) {
             <p style="color: #f8fafc; font-size: 1.1rem;"><strong>Historical CCRB Complaints:</strong> ${complaints.length}</p>
             ${complaints.length > 0 ? 
                 `<p style="font-size: 0.9rem; color: #94a3b8; margin-top: 10px;">Latest Allegation: ${complaints[0].Allegation || 'N/A'}</p>` 
-                : '<p style="color: #2ed573; font-size: 0.9rem; margin-top: 10px;">No
+                : '<p style="color: #2ed573; font-size: 0.9rem; margin-top: 10px;">No historical records found.</p>'}
+        </div>
+    `;
+}
+
+/**
+ * 4. SEARCH LOGIC
+ */
+async function handleSearch() {
+    const nameInput = document.getElementById('searchName');
+    const badgeInput = document.getElementById('searchBadge');
+    const resultsDiv = document.getElementById('results');
+
+    const searchName = nameInput ? nameInput.value.trim().toUpperCase() : "";
+    const searchBadge = badgeInput ? badgeInput.value.trim() : "";
+
+    if (!searchName && !searchBadge) {
+        resultsDiv.innerHTML = "<p style='color: orange;'>⚠️ Please enter a Name or Badge Number.</p>";
+        return;
+    }
+
+    resultsDiv.innerHTML = "Searching NYC Open Data...";
+
+    try {
+        let apiURL = `https://data.cityofnewyork.us/resource/2fir-qns4.json`;
+        
+        // Use 'officer_last_name' as identified in your network logs
+        if (searchBadge) {
+            apiURL += `?shield_no=${encodeURIComponent(searchBadge)}`;
+        } else if (searchName) {
+            apiURL += `?officer_last_name=${encodeURIComponent(searchName)}`;
+        }
+
+        const response = await fetch(apiURL, {
+            method: 'GET',
+            headers: {
+                'X-App-Token': appToken,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) throw new Error(`NYC API Error (${response.status})`);
+
+        const officerData = await response.json();
+
+        if (!officerData || officerData.length === 0) {
+            resultsDiv.innerHTML = "No live records found.";
+            return;
+        }
+
+        const liveOfficer = officerData[0];
+
+        // Match live 'tax_id' to your Supabase 'Tax ID' column
+        const { data: complaints, error: complaintsError } = await supabaseClient
+            .from('ccrb_complaints_nyc')
+            .select('*')
+            .eq('Tax ID', liveOfficer.tax_id);
+
+        if (complaintsError) console.warn("Supabase Error:", complaintsError.message);
+
+        renderResults(liveOfficer, complaints || []);
+
+    } catch (err) {
+        resultsDiv.innerHTML = `<p style='color: #ff4757;'>⚠️ ${err.message}</p>`;
+        console.error("Search failed:", err);
+    }
+}
+
+/**
+ * 5. INITIALIZATION
+ * Attach the listener once the DOM is fully loaded
+ */
+window.onload = function() {
+    const searchBtn = document.getElementById('searchBtn');
+    if (searchBtn) {
+        searchBtn.addEventListener('click', handleSearch);
+        console.log("System Ready: Search button linked.");
+    }
+};
