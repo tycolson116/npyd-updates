@@ -1,74 +1,60 @@
-// 1. Correctly grab the createClient function from the global window
-const { createClient } = window.supabase;
-
+// 1. Standard initialization (no window. or curly braces needed)
 const supabaseUrl = 'https://lcfezxfcljjztutbuonk.supabase.co';
 const supabaseKey = 'sb_publishable_3XzU5p7x061I67j5_A5ong_SpcSRAOO';
-const supabaseClient = createClient(supabaseUrl, supabaseKey);
+const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-// 2. NYC Open Data App Token
 const appToken = '9p0TgBMkCYRPZL3TktXvecvWb';
 
-// 3. Ensure the button is ready before attaching the event
-document.addEventListener('DOMContentLoaded', () => {
+// 2. Wrap everything in a check to make sure the page is loaded
+window.onload = () => {
     const searchBtn = document.getElementById('searchBtn');
     if (searchBtn) {
-        searchBtn.addEventListener('click', handleSearch);
+        searchBtn.onclick = handleSearch;
     }
-});
+};
 
 async function handleSearch() {
-    const searchNameInput = document.getElementById('searchName');
-    const searchBadgeInput = document.getElementById('searchBadge');
+    const searchName = document.getElementById('searchName').value.trim().toUpperCase();
+    const searchBadge = document.getElementById('searchBadge').value.trim();
     const resultsDiv = document.getElementById('results');
 
-    const searchName = searchNameInput ? searchNameInput.value.trim().toUpperCase() : "";
-    const searchBadge = searchBadgeInput ? searchBadgeInput.value.trim() : "";
-
-    if (!searchName && !searchBadge) {
-        resultsDiv.innerHTML = "<p style='color: orange;'>⚠️ Please enter a Name or Badge Number.</p>";
-        return;
-    }
-
-    resultsDiv.innerHTML = "<div class='loader'>Searching NYC Open Data...</div>";
+    resultsDiv.innerHTML = "Searching NYC Open Data...";
 
     try {
-        // 4. Using $where for better API response
+        // Use encodeURIComponent to handle special characters or spaces
         let apiURL = `https://data.cityofnewyork.us/resource/2fir-qns4.json`;
+        
         if (searchBadge) {
-            apiURL += `?$where=shield_no='${searchBadge}'`;
+            apiURL += `?shield_no=${searchBadge}`;
         } else if (searchName) {
-            apiURL += `?$where=upper(last_name)='${searchName}'`;
+            apiURL += `?last_name=${encodeURIComponent(searchName)}`;
         }
 
         const response = await fetch(apiURL, {
-            method: 'GET',
-            headers: {
-                'X-App-Token': appToken,
-                'Content-Type': 'application/json'
-            }
+            headers: { 'X-App-Token': appToken }
         });
 
-        if (!response.ok) throw new Error(`API Error: ${response.status}`);
-
         const officerData = await response.json();
+        console.log("API Response:", officerData); // Keep this to check your console!
 
         if (!officerData || officerData.length === 0) {
-            resultsDiv.innerHTML = `<p>No live records found for your search.</p>`;
+            resultsDiv.innerHTML = "No live records found.";
             return;
         }
 
         const liveOfficer = officerData[0];
-
-        // 5. Query Supabase using the ID from the API
+        
+        // Fetch complaints from Supabase
         const { data: complaints, error: complaintsError } = await supabaseClient
             .from('ccrb_complaints_nyc')
             .select('*')
             .eq('Tax ID', liveOfficer.officer_id);
 
-        if (complaintsError) console.warn("Supabase Error:", complaintsError.message);
-
         renderResults(liveOfficer, complaints || []);
-
+    } catch (err) {
+        resultsDiv.innerHTML = `Error: ${err.message}`;
+    }
+}
     } catch (err) {
         resultsDiv.innerHTML = `<p class='error'>System Note: ${err.message}</p>`;
         console.error(err);
