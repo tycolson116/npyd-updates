@@ -5,14 +5,18 @@ const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
 const appToken = '9p0TgBMkCYRPZL3TktXvecvWb';
 
-// 2. Wrap everything in a check to make sure the page is loaded
-window.onload = () => {
-    const searchBtn = document.getElementById('searchBtn');
-    if (searchBtn) {
-        searchBtn.onclick = handleSearch;
-    }
-};
+// Inside handleSearch()
+let apiURL = `https://data.cityofnewyork.us/resource/2fir-qns4.json`;
 
+if (searchBadge) {
+    // We add quotes around the badge number just in case the API sees it as a string
+    apiURL += `?shield_no=${searchBadge}`;
+} else if (searchName) {
+    // API names are usually stored in UPPERCASE
+    apiURL += `?last_name=${searchName.toUpperCase()}`;
+}
+
+console.log("Requesting URL:", apiURL); // Check this in your console to see if it looks right
 async function handleSearch() {
     const searchName = document.getElementById('searchName').value.trim().toUpperCase();
     const searchBadge = document.getElementById('searchBadge').value.trim();
