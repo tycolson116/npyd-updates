@@ -56,4 +56,70 @@ async function handleSearch() {
     const searchName = nameInput ? nameInput.value.trim().toUpperCase() : "";
     const searchBadge = badgeInput ? badgeInput.value.trim() : "";
 
-    if (!searchName
+    if (!searchName && !searchBadge) {
+        resultsDiv.innerHTML = "<p style='color: orange;'>⚠️ Please enter a Name or Badge Number.</p>";
+        return;
+    }
+
+    resultsDiv.innerHTML = "<div class='loader'>Searching NYC Open Data...</div>";
+
+    try {
+        let apiURL = `https://data.cityofnewyork.us/resource/2fir-qns4.json`;
+        
+        // FIXED: Column name is 'officer_last_name' for this dataset
+        if (searchBadge) {
+            apiURL += `?shield_no=${encodeURIComponent(searchBadge)}`;
+        } else if (searchName) {
+            apiURL += `?officer_last_name=${encodeURIComponent(searchName)}`;
+        }
+
+        const response = await fetch(apiURL, {
+            method: 'GET',
+            headers: {
+                'X-App-Token': appToken,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error("NYC API Error Details:", errorText);
+            throw new Error(`NYC Data Error (${response.status})`);
+        }
+
+        const officerData = await response.json();
+
+        if (!officerData || officerData.length === 0) {
+            resultsDiv.innerHTML = `<p>No live records found for your search.</p>`;
+            return;
+        }
+
+        const liveOfficer = officerData[0];
+
+        // 5. Match API 'tax_id' to your Supabase 'Tax ID' column
+        const { data: complaints, error: complaintsError } = await supabaseClient
+            .from('ccrb_complaints_nyc')
+            .select('*')
+            .eq('Tax ID', liveOfficer.tax_id);
+
+        if (complaintsError) console.warn("Supabase History Error:", complaintsError.message);
+
+        // Send to display function
+        renderResults(liveOfficer, complaints || []);
+
+    } catch (err) {
+        resultsDiv.innerHTML = `<p class='error' style='color: #ff4757;'>⚠️ ${err.message}</p>`;
+        console.error("Search failed:", err);
+    }
+}
+
+/**
+ * 6. INITIALIZATION
+ */
+window.onload = function() {
+    const searchBtn = document.getElementById('searchBtn');
+    if (searchBtn) {
+        searchBtn.addEventListener('click', handleSearch);
+        console.log("System Ready.");
+    }
+};
