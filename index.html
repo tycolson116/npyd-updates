@@ -3,38 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Officer Lookup App</title>
+    <title>Officer Lookup</title>
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="app-container">
-        <header>
-            <h1>Officer Lookup</h1>
-            <p class="subtitle">Search NYC Open Data Live</p>
-        </header>
 
-        <main>
-            <div class="search-box" style="display: flex; flex-direction: column; gap: 10px;">
-                <input type="text" id="searchName" placeholder="Search by Last Name (e.g. Smith)">
-                <input type="text" id="searchBadge" placeholder="Search by Badge Number (e.g. 1234)">
-                <button id="searchBtn">Search Officer</button>
-            </div>
+    <div class="container">
+        <h2>Officer Lookup</h2>
+        <p>Search NYC Open Data Live</p>
+        
+        <input type="text" id="nameInput" placeholder="FIRST NAME (e.g. MATTHEW)">
+        <input type="text" id="shieldInput" placeholder="SHIELD NUMBER (e.g. 2650)">
+        
+        <button id="searchBtn">Search Officer</button>
 
-            <div id="results"></div>
-
-            <div class="rights-card">
-                <h3>Your 4th Amendment Rights</h3>
-                <ul>
-                    <li><strong>Identify:</strong> Officers must provide name/shield.</li>
-                    <li><strong>Search:</strong> You may withhold consent for searches.</li>
-                    <li><strong>Record:</strong> You have a legal right to film.</li>
-                </ul>
-            </div>
-        </main>
+        <div id="resultsArea">
+            <p id="statusText">No live records found.</p>
+        </div>
     </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <div id="officerModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <div id="modalBody"></div>
+        </div>
+    </div>
 
-<script src="script.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
