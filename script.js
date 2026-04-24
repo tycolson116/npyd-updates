@@ -1,7 +1,6 @@
 document.getElementById('searchBtn').addEventListener('click', searchOfficer);
 
 async function searchOfficer() {
-    // 1. Get and Clean Inputs
     const nameInput = document.getElementById('nameInput').value.trim().toUpperCase();
     const shieldInput = document.getElementById('shieldInput').value.trim();
     
@@ -12,28 +11,30 @@ async function searchOfficer() {
     statusText.innerText = "Connecting to NYC Open Data...";
     statusText.style.color = "#8b949e";
 
-    // 2. The API Endpoint (NYPD Members of Service)
     const apiEndpoint = `https://data.cityofnewyork.us/resource/pmsy-ewrc.json`;
     
-    // 3. Fix: Build the URL using URLSearchParams to avoid 400 Bad Request
-    // This correctly handles spaces and special characters automatically
-    const params = new URLSearchParams({
-        "shield": shieldInput
-    });
+    // BUILD THE QUERY DYNAMICALLY
+    // This avoids sending empty "shield=&" which causes the 400 error
+    let queryParams = [];
+
+    if (shieldInput) {
+        queryParams.push(`shield=${encodeURIComponent(shieldInput)}`);
+    }
     
-    // We add the name filter separately to ensure it matches the database format
-    const finalUrl = `${apiEndpoint}?${params.toString()}&$where=name LIKE '%${nameInput}%'`;
+    if (nameInput) {
+        // Correctly formatted $where clause for Socrata
+        queryParams.push(`$where=name LIKE '%25${encodeURIComponent(nameInput)}%25'`);
+    }
+
+    const finalUrl = `${apiEndpoint}?${queryParams.join('&')}`;
 
     try {
-        // Fix: Use 'cors' mode and proper headers
-        const response = await fetch(finalUrl, {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json'
-            }
-        });
+        const response = await fetch(finalUrl);
         
         if (!response.ok) {
+            // If the city returns a 400, this will help us see the actual error message
+            const errorDetails = await response.text();
+            console.error("API Error Details:", errorDetails);
             throw new Error(`Server Error: ${response.status}`);
         }
 
@@ -49,7 +50,7 @@ async function searchOfficer() {
                 <hr style="border: 0; border-top: 1px solid #30363d; margin: 15px 0;">
                 <div style="text-align: left; line-height: 1.8;">
                     <p><strong>Name:</strong> ${officer.name}</p>
-                    <p><strong>Shield:</strong> ${officer.shield}</p>
+                    <p><strong>Shield:</strong> ${officer.shield || 'N/A'}</p>
                     <p><strong>Rank:</strong> ${officer.rank || 'N/A'}</p>
                     <p><strong>Command:</strong> ${officer.command || 'N/A'}</p>
                     <p><strong>Total Arrests:</strong> ${officer.arrests_total || '0'}</p>
@@ -65,19 +66,7 @@ async function searchOfficer() {
 
     } catch (error) {
         console.error("Critical System Error:", error);
-        statusText.innerText = "Connection Blocked. Try again.";
+        statusText.innerText = "Search Failed. Check inputs and try again.";
         statusText.style.color = "#e74c3c";
     }
 }
-
-// Modal Control Logic
-document.getElementById('closeModal').onclick = function() {
-    document.getElementById('officerModal').style.display = "none";
-};
-
-window.onclick = function(event) {
-    const modal = document.getElementById('officerModal');
-    if (event.target == modal) {
-        modal.style.display = "none";
-    }
-};
