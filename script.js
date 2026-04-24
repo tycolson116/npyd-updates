@@ -1,7 +1,7 @@
 document.getElementById('searchBtn').addEventListener('click', searchOfficer);
 
 async function searchOfficer() {
-    // 1. Get and Format Inputs
+    // 1. Clean and Format Inputs
     const nameInput = document.getElementById('nameInput').value.trim().toUpperCase();
     const shieldInput = document.getElementById('shieldInput').value.trim();
     
@@ -9,53 +9,45 @@ async function searchOfficer() {
     const modal = document.getElementById('officerModal');
     const modalBody = document.getElementById('modalBody');
 
-    // 2. Clear UI & Set Loading State
-    statusText.innerText = "Searching NYC Database...";
+    // Reset UI
+    statusText.innerText = "Searching Live NYPD Records...";
     
-    // UPDATED API ENDPOINT: Using the stable Payroll/Active dataset
-    const apiEndpoint = `https://data.cityofnewyork.us/resource/59kj-x869.json`;
+    // 2. THE FIX: Live 2026 Dataset (Members of Service)
+    const apiEndpoint = `https://data.cityofnewyork.us/resource/pmsy-ewrc.json`;
     
-    // In this specific dataset, the field is 'shield', not 'shield_no'
-    const query = `?first_name=${nameInput}&shield=${shieldInput}`;
+    // This dataset uses 'name' and 'shield'. 
+    // We use a query that looks for the name anywhere in the 'name' field.
+    const query = `?$where=name LIKE '%${nameInput}%' AND shield='${shieldInput}'`;
 
     try {
         const response = await fetch(apiEndpoint + query);
         
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
+        if (!response.ok) throw new Error("API Connection Failed");
 
         const data = await response.json();
-        console.log("Data received:", data); // Helpful for your console debugging
+        console.log("Data received:", data); // Check your console for this!
 
         if (data && data.length > 0) {
             const officer = data[0];
             statusText.innerText = "Officer Found!";
 
-            // 3. Populate the Pop-up (Modal)
-            // Note: Field names change slightly per dataset (e.g., agency_name)
+            // 3. Populate the Pop-up (Modal) with 2026 Data Fields
             modalBody.innerHTML = `
-                <h2 style="color: #58a6ff; margin-top: 0;">Officer Profile</h2>
-                <hr style="border: 0; border-top: 1px solid #30363d; margin: 15px 0;">
-                <p><strong>Full Name:</strong> ${officer.first_name} ${officer.last_name}</p>
-                <p><strong>Shield Number:</strong> ${officer.shield}</p>
-                <p><strong>Title/Rank:</strong> ${officer.title_description || 'N/A'}</p>
-                <p><strong>Command:</strong> ${officer.agency_name || 'NYPD'}</p>
-                <p><strong>Fiscal Year:</strong> ${officer.fiscal_year || 'Current'}</p>
+                <h2 style="color: #58a6ff; margin-bottom: 5px;">Officer Found</h2>
+                <p style="color: #8b949e; font-size: 0.8rem; margin-bottom: 15px;">NYC Open Data Profile</p>
+                <hr style="border: 0; border-top: 1px solid #30363d; margin-bottom: 15px;">
+                
+                <div style="text-align: left; line-height: 1.6;">
+                    <p><strong>Name:</strong> ${officer.name}</p>
+                    <p><strong>Shield:</strong> ${officer.shield}</p>
+                    <p><strong>Rank:</strong> ${officer.rank || 'N/A'}</p>
+                    <p><strong>Command:</strong> ${officer.command || 'N/A'}</p>
+                    <p><strong>Arrests:</strong> ${officer.arrests_total || '0'}</p>
+                    <p><strong>Recognitions:</strong> ${officer.department_recognitions || '0'}</p>
+                    <p><strong>Appointed:</strong> ${officer.appointment_date ? officer.appointment_date.split('T')[0] : 'N/A'}</p>
+                </div>
             `;
             
-            // Show the Pop-up
+            // Trigger the Pop-up
             modal.style.display = "block";
         } else {
-            statusText.innerText = "No live records found.";
-            alert(`No officer found matching Name: ${nameInput} and Shield: ${shieldInput}. Check the numbers and try again.`);
-        }
-    } catch (error) {
-        console.error("Fetch Error:", error);
-        statusText.innerText = "Error: Dataset unavailable or network issue.";
-    }
-}
-
-// Logic to close the pop-up
-document.getElementById('closeModal').onclick = function() {
-    document.getElementById('officer
