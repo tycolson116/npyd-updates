@@ -1,4 +1,3 @@
-// Link the search button to the function
 document.getElementById('searchBtn').addEventListener('click', searchOfficer);
 
 async function searchOfficer() {
@@ -10,18 +9,29 @@ async function searchOfficer() {
     const modal = document.getElementById('officerModal');
     const modalBody = document.getElementById('modalBody');
 
-    // Reset UI for new search
     statusText.innerText = "Connecting to NYC Open Data...";
     statusText.style.color = "#8b949e";
 
-    // 2. LIVE DATASET: NYPD Officer Profile - Members of Service (ID: pmsy-ewrc)
+    // 2. The API Endpoint (NYPD Members of Service)
     const apiEndpoint = `https://data.cityofnewyork.us/resource/pmsy-ewrc.json`;
     
-    // Query logic: Searches for name anywhere in the string and exact shield match
-    const query = `?$where=name LIKE '%${nameInput}%' AND shield='${shieldInput}'`;
+    // 3. Fix: Build the URL using URLSearchParams to avoid 400 Bad Request
+    // This correctly handles spaces and special characters automatically
+    const params = new URLSearchParams({
+        "shield": shieldInput
+    });
+    
+    // We add the name filter separately to ensure it matches the database format
+    const finalUrl = `${apiEndpoint}?${params.toString()}&$where=name LIKE '%${nameInput}%'`;
 
     try {
-        const response = await fetch(apiEndpoint + query);
+        // Fix: Use 'cors' mode and proper headers
+        const response = await fetch(finalUrl, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
         
         if (!response.ok) {
             throw new Error(`Server Error: ${response.status}`);
@@ -34,7 +44,6 @@ async function searchOfficer() {
             statusText.innerText = "Officer Found!";
             statusText.style.color = "#2ecc71";
 
-            // Inject data into the Pop-up
             modalBody.innerHTML = `
                 <h2 style="color: #58a6ff; margin-top: 0;">Officer Profile</h2>
                 <hr style="border: 0; border-top: 1px solid #30363d; margin: 15px 0;">
@@ -56,10 +65,10 @@ async function searchOfficer() {
 
     } catch (error) {
         console.error("Critical System Error:", error);
-        statusText.innerText = "System Error: Check connection.";
+        statusText.innerText = "Connection Blocked. Try again.";
         statusText.style.color = "#e74c3c";
     }
-} // <--- This was likely the missing bracket!
+}
 
 // Modal Control Logic
 document.getElementById('closeModal').onclick = function() {
