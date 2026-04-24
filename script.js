@@ -1,49 +1,61 @@
 document.getElementById('searchBtn').addEventListener('click', searchOfficer);
 
 async function searchOfficer() {
-    // 1. Get inputs and force them to UPPERCASE (NYC Data requirement)
+    // 1. Get and Format Inputs
     const nameInput = document.getElementById('nameInput').value.trim().toUpperCase();
     const shieldInput = document.getElementById('shieldInput').value.trim();
     
     const statusText = document.getElementById('statusText');
-    const resultsArea = document.getElementById('resultsArea');
+    const modal = document.getElementById('officerModal');
+    const modalBody = document.getElementById('modalBody');
 
-    // 2. Clear previous results and show loading state
-    statusText.innerText = "Searching NYC Open Data...";
+    // 2. Clear UI & Set Loading State
+    statusText.innerText = "Searching NYC Database...";
     
-    // Using the NYPD Active Officers dataset ID (833y-7zab)
-    // We use $where to search for records that START with the name or match the shield
-    const apiEndpoint = `https://data.cityofnewyork.us/resource/833y-7zab.json`;
-    const query = `?first_name=${nameInput}&shield_no=${shieldInput}`;
+    // UPDATED API ENDPOINT: Using the stable Payroll/Active dataset
+    const apiEndpoint = `https://data.cityofnewyork.us/resource/59kj-x869.json`;
+    
+    // In this specific dataset, the field is 'shield', not 'shield_no'
+    const query = `?first_name=${nameInput}&shield=${shieldInput}`;
 
     try {
         const response = await fetch(apiEndpoint + query);
-        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
 
-        // DEBUG: See what the city actually sent back in your console
-        console.log("Data received:", data);
+        const data = await response.json();
+        console.log("Data received:", data); // Helpful for your console debugging
 
         if (data && data.length > 0) {
             const officer = data[0];
             statusText.innerText = "Officer Found!";
 
-            // 3. Create the "Pop up" content inside your results box
-            // Note: We use the exact API keys like 'first_name' and 'command_descr'
-            resultsArea.innerHTML = `
-                <div class="officer-card" style="border: 2px solid #3498db; padding: 15px; border-radius: 8px; background: #1a1f2b; margin-top: 10px; animation: fadeIn 0.5s;">
-                    <h3 style="color: #2ecc71; margin-top: 0;">${officer.first_name} ${officer.last_name}</h3>
-                    <p><strong>Shield #:</strong> ${officer.shield_no}</p>
-                    <p><strong>Rank:</strong> ${officer.rank_incident_grade || 'N/A'}</p>
-                    <p><strong>Command:</strong> ${officer.command_descr || 'N/A'}</p>
-                    <p><strong>Appointed Date:</strong> ${officer.appointment_date ? officer.appointment_date.split('T')[0] : 'N/A'}</p>
-                </div>
+            // 3. Populate the Pop-up (Modal)
+            // Note: Field names change slightly per dataset (e.g., agency_name)
+            modalBody.innerHTML = `
+                <h2 style="color: #58a6ff; margin-top: 0;">Officer Profile</h2>
+                <hr style="border: 0; border-top: 1px solid #30363d; margin: 15px 0;">
+                <p><strong>Full Name:</strong> ${officer.first_name} ${officer.last_name}</p>
+                <p><strong>Shield Number:</strong> ${officer.shield}</p>
+                <p><strong>Title/Rank:</strong> ${officer.title_description || 'N/A'}</p>
+                <p><strong>Command:</strong> ${officer.agency_name || 'NYPD'}</p>
+                <p><strong>Fiscal Year:</strong> ${officer.fiscal_year || 'Current'}</p>
             `;
+            
+            // Show the Pop-up
+            modal.style.display = "block";
         } else {
             statusText.innerText = "No live records found.";
-            resultsArea.innerHTML = `<p style="color: #e74c3c;">No officer matches "${nameInput}" with Shield "${shieldInput}".</p>`;
+            alert(`No officer found matching Name: ${nameInput} and Shield: ${shieldInput}. Check the numbers and try again.`);
         }
     } catch (error) {
         console.error("Fetch Error:", error);
-        statusText.innerText = "Connection Error. Check internet/API link.";
+        statusText.innerText = "Error: Dataset unavailable or network issue.";
     }
 }
+
+// Logic to close the pop-up
+document.getElementById('closeModal').onclick = function() {
+    document.getElementById('officer
